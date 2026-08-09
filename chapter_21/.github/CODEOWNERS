@@ -1,0 +1,6 @@
+# Chapter 16: require review on the highest-privilege surfaces.
+.github/workflows/ @orders-api-maintainers
+package.json @orders-api-maintainers
+pnpm-lock.yaml @orders-api-maintainers
+.npmrc @orders-api-maintainers
+SECURITY.md @orders-api-maintainers

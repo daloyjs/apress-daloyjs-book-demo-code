@@ -1,0 +1,284 @@
+import { z } from "zod";
+import {
+  App,
+  NotFoundError,
+  UnauthorizedError,
+  cors,
+  csrf,
+  every,
+  ipRestriction,
+  jwk,
+  rateLimit,
+  requestId,
+  requireScopes,
+  secureHeaders,
+} from "@daloyjs/core";
+import type { AppOptions } from "@daloyjs/core";
+import {
+  DEMO_AUDIENCE,
+  DEMO_ISSUER,
+  DEMO_JWKS,
+} from "./auth/demo-keys.ts";
+import {
+  createOrder,
+  createProduct,
+  getOrderForOwner,
+  getProduct,
+  listProducts,
+} from "./domain/catalog-orders.ts";
+
+const ProductSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    priceCents: z.number().int().nonnegative(),
+  })
+  .strict();
+
+const CreateProductSchema = z
+  .object({
+    name: z.string().min(1),
+    priceCents: z.number().int().nonnegative(),
+  })
+  .strict();
+
+const OrderItemSchema = z
+  .object({
+    productId: z.string().min(1),
+    quantity: z.number().int().positive(),
+  })
+  .strict();
+
+const OrderSchema = z
+  .object({
+    id: z.string(),
+    ownerId: z.string(),
+    status: z.enum(["pending", "paid", "shipped", "cancelled"]),
+    items: z.array(OrderItemSchema),
+  })
+  .strict();
+
+const CreateOrderSchema = z
+  .object({
+    items: z.array(OrderItemSchema).min(1),
+  })
+  .strict();
+
+/**
+ * Chapter 11: Ch10 public API + /admin group behind ipRestriction.
+ * resolveIp is set for in-process tests; production uses adapter conn info / trustProxy.
+ */
+export function buildApp(
+  overrides: Partial<AppOptions> & { enableTestRoutes?: boolean } = {},
+): App {
+  const { enableTestRoutes = false, ...appOpts } = overrides;
+  const verify = jwk({
+    jwks: DEMO_JWKS,
+    algorithms: ["ES256"],
+    issuer: DEMO_ISSUER,
+    audience: DEMO_AUDIENCE,
+    realm: "orders-api",
+  });
+
+  const app = new App({
+    bodyLimitBytes: 256 * 1024,
+    requestTimeoutMs: 15_000,
+    production: process.env.NODE_ENV === "production",
+    openapi: { info: { title: "orders-api", version: "0.11.0" } },
+    docs: process.env.NODE_ENV !== "production",
+    ...appOpts,
+  });
+
+  app.use(requestId());
+  app.use(secureHeaders());
+  app.use(cors({ origin: ["https://shop.example.com"], credentials: true }));
+  app.use(
+    csrf({
+      strategy: "fetch-metadata",
+      allowedOrigins: ["https://shop.example.com"],
+    }),
+  );
+  app.use(
+    rateLimit({
+      windowMs: 60_000,
+      max: 300,
+      keyGenerator: (ctx) => ctx.state.clientIp ?? "unknown",
+    }),
+  );
+
+  app.get(
+    "/healthz",
+    {
+      operationId: "healthz",
+      tags: ["Ops"],
+      responses: {
+        200: {
+          description: "ok",
+          body: z.object({ ok: z.literal(true), uptime: z.number() }),
+        },
+      },
+    },
+    async () => ({
+      status: 200 as const,
+      body: { ok: true as const, uptime: process.uptime() },
+    }),
+  );
+
+  app.get(
+    "/products",
+    {
+      operationId: "listProducts",
+      tags: ["catalog"],
+      responses: { 200: { description: "ok", body: z.array(ProductSchema) } },
+    },
+    async () => ({ status: 200 as const, body: await listProducts({ limit: 50 }) }),
+  );
+
+  app.get(
+    "/products/:id",
+    {
+      operationId: "getProduct",
+      tags: ["catalog"],
+      request: { params: z.object({ id: z.string().min(1) }).strict() },
+      responses: {
+        200: { description: "ok", body: ProductSchema },
+        404: { description: "not found" },
+      },
+    },
+    async ({ params }) => {
+      const product = await getProduct(params.id);
+      if (!product) throw new NotFoundError(`Product ${params.id} not found`);
+      return { status: 200 as const, body: product };
+    },
+  );
+
+  app.post(
+    "/products",
+    {
+      operationId: "createProduct",
+      tags: ["catalog"],
+      auth: { scheme: "bearer", scopes: ["catalog:write"] },
+      hooks: every(verify, requireScopes(["catalog:write"])),
+      request: { body: CreateProductSchema },
+      responses: {
+        201: { description: "created", body: ProductSchema },
+        401: { description: "unauthorized" },
+        403: { description: "forbidden" },
+      },
+    },
+    async ({ body }) => {
+      const product = await createProduct(body);
+      return { status: 201 as const, body: product };
+    },
+  );
+
+  app.post(
+    "/orders",
+    {
+      operationId: "createOrder",
+      tags: ["orders"],
+      auth: { scheme: "bearer", scopes: ["orders:write"] },
+      hooks: every(verify, requireScopes(["orders:write"])),
+      request: { body: CreateOrderSchema },
+      responses: {
+        201: { description: "created", body: OrderSchema },
+        401: { description: "unauthorized" },
+        403: { description: "forbidden" },
+      },
+    },
+    async ({ body, state }) => {
+      const user = state.user as { sub?: string } | undefined;
+      if (!user?.sub) throw new UnauthorizedError("missing user");
+      const order = await createOrder({ ownerId: user.sub, items: body.items });
+      return { status: 201 as const, body: order };
+    },
+  );
+
+  app.get(
+    "/orders/:id",
+    {
+      operationId: "getOrder",
+      tags: ["orders"],
+      auth: { scheme: "bearer", scopes: ["orders:read"] },
+      hooks: every(verify, requireScopes(["orders:read"])),
+      request: { params: z.object({ id: z.string().min(1) }).strict() },
+      responses: {
+        200: { description: "ok", body: OrderSchema },
+        403: { description: "forbidden" },
+        404: { description: "not found" },
+      },
+    },
+    async ({ params, state }) => {
+      const user = state.user as { sub?: string } | undefined;
+      if (!user?.sub) throw new UnauthorizedError("missing user");
+      const order = await getOrderForOwner(params.id, user.sub);
+      if (!order) throw new NotFoundError(`Order ${params.id} not found`);
+      return { status: 200 as const, body: order };
+    },
+  );
+
+  // Admin surface: IP allowlist first. Prefer a separate process in production.
+  app.group(
+    "/admin",
+    {
+      hooks: ipRestriction({
+        allow: ["127.0.0.1", "::1", "10.20.0.0/16"],
+        resolveIp: (ctx) =>
+          ctx.request.headers.get("x-test-client-ip") ?? "127.0.0.1",
+      }),
+    },
+    (admin) => {
+      admin.get(
+        "/orders-summary",
+        {
+          operationId: "adminOrdersSummary",
+          tags: ["admin"],
+          auth: { scheme: "bearer", scopes: ["orders:read"] },
+          hooks: every(verify, requireScopes(["orders:read"])),
+          responses: {
+            200: {
+              description: "ok",
+              body: z.object({ ok: z.literal(true), note: z.string() }),
+            },
+          },
+        },
+        async () => ({
+          status: 200 as const,
+          body: {
+            ok: true as const,
+            note: "Admin summary (IP-restricted). Prefer a separate admin app in production.",
+          },
+        }),
+      );
+    },
+  );
+
+  if (enableTestRoutes) {
+    app.get(
+      "/__test/slow",
+      {
+        operationId: "testSlow",
+        tags: ["test"],
+        responses: { 200: { description: "ok", body: z.object({ ok: z.literal(true) }) } },
+      },
+      async () => {
+        await new Promise((r) => setTimeout(r, 200));
+        return { status: 200 as const, body: { ok: true as const } };
+      },
+    );
+    app.post(
+      "/__test/crash",
+      {
+        operationId: "testCrash",
+        tags: ["test"],
+        responses: { 500: { description: "crash" } },
+      },
+      async () => {
+        throw new Error("payments-db at 10.0.4.12:5432 refused connection");
+      },
+    );
+  }
+  return app;
+}
+
+export default buildApp;

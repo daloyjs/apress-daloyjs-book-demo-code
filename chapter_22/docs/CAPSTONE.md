@@ -1,0 +1,3 @@
+- REST + MCP green
+- pnpm test
+- dual-runtime deploy without changing build-app.ts

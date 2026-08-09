@@ -1,0 +1,17 @@
+{
+  "keys": [
+    {
+      "key_ops": [
+        "verify"
+      ],
+      "ext": true,
+      "kty": "EC",
+      "x": "regsZdxUNMxrDKczSyWGcbNnsnriNvPwwwSrj3wpHqk",
+      "y": "Oi3W5yg7P-UL_6QNs0I2XzC6vEvHuOS-B7Kadwir160",
+      "crv": "P-256",
+      "kid": "orders-demo-1",
+      "alg": "ES256",
+      "use": "sig"
+    }
+  ]
+}
