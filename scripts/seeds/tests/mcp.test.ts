@@ -62,15 +62,85 @@ test("tools/call returns structured order data", async () => {
   ]);
 });
 
-test("initialize negotiates a protocol version", async () => {
-  const { status, body } = await mcpCall("initialize", {
-    protocolVersion: "2025-03-26",
-    capabilities: {},
-    clientInfo: { name: "orders-lab", version: "0.0.1" },
+// MCP 2026-07-28 is stateless: no initialize handshake, no Mcp-Session-Id.
+// Every request declares its own protocol version, client identity, and
+// capabilities in _meta, and mirrors the version and method into headers.
+const MODERN = "2026-07-28";
+const META = {
+  "io.modelcontextprotocol/protocolVersion": MODERN,
+  "io.modelcontextprotocol/clientInfo": {
+    name: "orders-lab",
+    version: "0.0.1",
+  },
+  "io.modelcontextprotocol/clientCapabilities": {},
+};
+
+async function modernCall(method, params = {}, overrides = {}) {
+  const headers = {
+    "content-type": "application/json",
+    accept: "application/json",
+    authorization: "Bearer " + token,
+    "mcp-protocol-version": overrides.headerVersion ?? MODERN,
+    "mcp-method": method,
+    ...(params.name ? { "mcp-name": params.name } : {}),
+  };
+  const res = await app.fetch(
+    new Request("http://127.0.0.1/mcp", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method,
+        params: { ...params, _meta: META },
+      }),
+    }),
+  );
+  return { status: res.status, body: await res.json() };
+}
+
+test("server/discover reports supported versions without a handshake", async () => {
+  const { status, body } = await modernCall("server/discover");
+  assert.equal(status, 200);
+  assert.equal(body.error, undefined);
+  assert.equal(body.result.resultType, "complete");
+  assert.ok(body.result.supportedVersions.includes(MODERN));
+  // Server identity travels per-result, not per-session.
+  assert.ok(body.result._meta["io.modelcontextprotocol/serverInfo"].name);
+});
+
+test("a modern tools/call needs no session and returns only chosen fields", async () => {
+  const { status, body } = await modernCall("tools/call", {
+    name: "lookup_order",
+    arguments: { orderId: "ord_demo_1" },
   });
   assert.equal(status, 200);
   assert.equal(body.error, undefined);
-  assert.ok(body.result?.protocolVersion || body.result?.serverInfo);
+  assert.deepEqual(Object.keys(body.result.structuredContent).sort(), [
+    "id",
+    "itemCount",
+    "status",
+  ]);
+});
+
+test("catalog listings are private and uncached by default", async () => {
+  // A per-principal tool list cached as shared would serve one tenant's
+  // catalog to the next caller. The conservative pair is the default.
+  const { body } = await modernCall("tools/list");
+  assert.equal(body.result.cacheScope, "private");
+  assert.equal(body.result.ttlMs, 0);
+});
+
+test("a version header that disagrees with the body is refused", async () => {
+  // The gateway routes on the header while the app dispatches on the body;
+  // letting them disagree is how one policy gets applied to another action.
+  const { status, body } = await modernCall(
+    "tools/list",
+    {},
+    { headerVersion: "2025-06-18" },
+  );
+  assert.equal(status, 400);
+  assert.equal(body.error.code, -32020);
 });
 
 test("unknown order id is a tool error, not another tenant's data", async () => {
