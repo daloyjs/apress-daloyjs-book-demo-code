@@ -85,7 +85,7 @@ pnpm dev:mcp      # MCP on :3001
 
 ## Pin
 
-`@daloyjs/core` **1.0.0**, TypeScript 7, Zod 4.
+`@daloyjs/core` **1.17.2**, pnpm 12, TypeScript 7, Zod 4.
 
 ## Maintainers / authors only
 

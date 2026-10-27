@@ -157,7 +157,6 @@ export function buildMcpApp(): App {
     rateLimit({
       windowMs: 60_000,
       max: 60,
-      keyGenerator: (ctx) => ctx.state.clientIp ?? "unknown",
     }),
   );
   app.use(

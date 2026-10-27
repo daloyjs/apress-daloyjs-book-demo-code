@@ -6,13 +6,17 @@ process.env.NODE_ENV = "development";
 
 const { buildMcpApp } = await import("../src/mcp/build-mcp-app.ts");
 const token = process.env.MCP_TOKEN;
-let app;
+let app: ReturnType<typeof buildMcpApp>;
 
 before(() => {
   app = buildMcpApp();
 });
 
-async function mcpCall(method, params, authed = true) {
+async function mcpCall(
+  method: string,
+  params: unknown,
+  authed = true,
+): Promise<{ status: number; body: any }> {
   const res = await app.fetch(
     new Request("http://127.0.0.1/mcp", {
       method: "POST",
@@ -35,7 +39,7 @@ test("tools/list requires a bearer token", async () => {
 test("tools/list returns the agent-safe catalog", async () => {
   const { status, body } = await mcpCall("tools/list", {});
   assert.equal(status, 200);
-  const names = body.result.tools.map((t) => t.name).sort();
+  const names = body.result.tools.map((t: { name: string }) => t.name).sort();
   assert.deepEqual(names, ["list_products", "lookup_order"]);
 });
 
@@ -75,7 +79,11 @@ const META = {
   "io.modelcontextprotocol/clientCapabilities": {},
 };
 
-async function modernCall(method, params = {}, overrides = {}) {
+async function modernCall(
+  method: string,
+  params: { name?: string; [key: string]: unknown } = {},
+  overrides: { headerVersion?: string } = {},
+): Promise<{ status: number; body: any }> {
   const headers = {
     "content-type": "application/json",
     accept: "application/json",

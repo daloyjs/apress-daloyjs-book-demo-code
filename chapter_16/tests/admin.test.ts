@@ -9,7 +9,7 @@ test("admin summary allowed from loopback", async () => {
   const res = await app.request("/admin/orders-summary", {
     headers: {
       authorization: "Bearer " + token,
-      "x-test-client-ip": "127.0.0.1",
+      "x-forwarded-for": "127.0.0.1",
     },
   });
   assert.equal(res.status, 200);
@@ -21,8 +21,17 @@ test("admin summary refused from non-allowlisted IP", async () => {
   const res = await app.request("/admin/orders-summary", {
     headers: {
       authorization: "Bearer " + token,
-      "x-test-client-ip": "203.0.113.9",
+      "x-forwarded-for": "203.0.113.9",
     },
+  });
+  assert.equal(res.status, 403);
+});
+
+test("admin summary refused when the client IP cannot be resolved", async () => {
+  const app = buildApp();
+  const token = await mintDemoToken("orders:read", "user_alice");
+  const res = await app.request("/admin/orders-summary", {
+    headers: { authorization: "Bearer " + token },
   });
   assert.equal(res.status, 403);
 });

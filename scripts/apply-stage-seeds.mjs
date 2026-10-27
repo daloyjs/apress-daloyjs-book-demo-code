@@ -244,7 +244,7 @@ test("admin summary allowed from loopback", async () => {
   const res = await app.request("/admin/orders-summary", {
     headers: {
       authorization: "Bearer " + token,
-      "x-test-client-ip": "127.0.0.1",
+      "x-forwarded-for": "127.0.0.1",
     },
   });
   assert.equal(res.status, 200);
@@ -256,8 +256,17 @@ test("admin summary refused from non-allowlisted IP", async () => {
   const res = await app.request("/admin/orders-summary", {
     headers: {
       authorization: "Bearer " + token,
-      "x-test-client-ip": "203.0.113.9",
+      "x-forwarded-for": "203.0.113.9",
     },
+  });
+  assert.equal(res.status, 403);
+});
+
+test("admin summary refused when the client IP cannot be resolved", async () => {
+  const app = buildApp();
+  const token = await mintDemoToken("orders:read", "user_alice");
+  const res = await app.request("/admin/orders-summary", {
+    headers: { authorization: "Bearer " + token },
   });
   assert.equal(res.status, 403);
 });
@@ -277,7 +286,7 @@ test("admin summary allowed from loopback with verified client cert", async () =
   const res = await app.request("/admin/orders-summary", {
     headers: {
       authorization: "Bearer " + token,
-      "x-test-client-ip": "127.0.0.1",
+      "x-forwarded-for": "127.0.0.1",
       ...DEMO_ADMIN_CERT_HEADERS,
     },
   });
@@ -290,7 +299,19 @@ test("admin summary refused from non-allowlisted IP even with cert", async () =>
   const res = await app.request("/admin/orders-summary", {
     headers: {
       authorization: "Bearer " + token,
-      "x-test-client-ip": "203.0.113.9",
+      "x-forwarded-for": "203.0.113.9",
+      ...DEMO_ADMIN_CERT_HEADERS,
+    },
+  });
+  assert.equal(res.status, 403);
+});
+
+test("admin summary refused when the client IP cannot be resolved", async () => {
+  const app = buildApp();
+  const token = await mintDemoToken("orders:read", "user_alice");
+  const res = await app.request("/admin/orders-summary", {
+    headers: {
+      authorization: "Bearer " + token,
       ...DEMO_ADMIN_CERT_HEADERS,
     },
   });
@@ -303,7 +324,7 @@ test("admin summary refused without client certificate", async () => {
   const res = await app.request("/admin/orders-summary", {
     headers: {
       authorization: "Bearer " + token,
-      "x-test-client-ip": "127.0.0.1",
+      "x-forwarded-for": "127.0.0.1",
     },
   });
   assert.equal(res.status, 401);
@@ -364,7 +385,7 @@ pnpm test
 pnpm dev
 \`\`\`
 
-Pin: \`@daloyjs/core\` ^1.0.0. Tag: \`chapter-${id}\`.
+Pin: \`@daloyjs/core\` ^1.17.2. Tag: \`chapter-${id}\`.
 `,
   );
 }

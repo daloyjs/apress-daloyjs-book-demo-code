@@ -83,7 +83,6 @@ export function buildApp(
     rateLimit({
       windowMs: 60_000,
       max: 120,
-      keyGenerator: (ctx) => ctx.state.clientIp ?? "unknown",
     }),
   );
 

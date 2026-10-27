@@ -66,7 +66,8 @@ const CreateOrderSchema = z
 
 /**
  * Chapter 11: Ch10 public API + /admin group behind ipRestriction.
- * resolveIp is set for in-process tests; production uses adapter conn info / trustProxy.
+ * The admin allowlist reads the client IP from X-Forwarded-For (trustProxyHeaders),
+ * matching Listing 11-5. A request with no resolvable IP is refused (fail-closed).
  */
 export function buildApp(
   overrides: Partial<AppOptions> & { enableTestRoutes?: boolean } = {},
@@ -102,7 +103,6 @@ export function buildApp(
     rateLimit({
       windowMs: 60_000,
       max: 300,
-      keyGenerator: (ctx) => ctx.state.clientIp ?? "unknown",
     }),
   );
 
@@ -223,8 +223,7 @@ export function buildApp(
     {
       hooks: ipRestriction({
         allow: ["127.0.0.1", "::1", "10.20.0.0/16"],
-        resolveIp: (ctx) =>
-          ctx.request.headers.get("x-test-client-ip") ?? "127.0.0.1",
+        trustProxyHeaders: true,
       }),
     },
     (admin) => {

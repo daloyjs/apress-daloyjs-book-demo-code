@@ -35,8 +35,6 @@ export function buildApp(
   overrides: Partial<AppOptions> & { enableTestRoutes?: boolean } = {},
 ): App {
   const { enableTestRoutes = false, ...appOpts } = overrides;
-  const clientKey = (ctx: { state: { clientIp?: string } }) =>
-    ctx.state.clientIp ?? "unknown";
 
   const verify = jwk({
     jwks: DEMO_JWKS,
@@ -49,6 +47,7 @@ export function buildApp(
   const app = new App({
     bodyLimitBytes: 256 * 1024,
     requestTimeoutMs: 15_000,
+    behindProxy: { hops: 1 },
     // Always on (book uses `true`). ELU is disabled (0) under node:test load;
     // event-loop delay remains the active process-pressure gate.
     loadShedding: {
@@ -72,15 +71,13 @@ export function buildApp(
       allowedOrigins: ["https://shop.example.com"],
     }),
   );
-  app.use(rateLimit({ windowMs: 60_000, max: 300, keyGenerator: clientKey }));
-  app.use(autoBan({ keyGenerator: clientKey }));
+  // rateLimit() keys on the client IP that behindProxy resolves.
+  app.use(rateLimit({ windowMs: 60_000, max: 300 }));
+  app.use(autoBan({ trustedHops: 1 }));
   app.use(
     botGuard({
       verifiedBots: WELL_KNOWN_BOTS,
-      resolveIp: (ctx) =>
-        ctx.state.clientIp ??
-        ctx.request.headers.get("x-test-client-ip") ??
-        "127.0.0.1",
+      trustedHops: 1,
       blockEmptyUserAgent: process.env.NODE_ENV === "production",
     }),
   );
@@ -127,8 +124,7 @@ export function buildApp(
       hooks: every(
         ipRestriction({
           allow: ["127.0.0.1", "::1", "10.20.0.0/16"],
-          resolveIp: (ctx) =>
-            ctx.request.headers.get("x-test-client-ip") ?? "127.0.0.1",
+          trustedHops: 1,
         }),
         clientCertAuth({
           requireVerified: true,

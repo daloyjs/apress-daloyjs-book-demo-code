@@ -15,7 +15,7 @@ export const DEMO_JWKS: JwkSet = {
       kid: "orders-demo-1",
       alg: "ES256",
       use: "sig",
-    } as JsonWebKey,
+    },
   ],
 };
 
@@ -28,7 +28,7 @@ export const DEMO_PRIVATE_JWK = {
   d: "2CRtPJDoj6oaJMVFFGMbDSxBPrX3VVIJNt89ycc0_Zs",
   kid: "orders-demo-1",
   alg: "ES256",
-} as JsonWebKey;
+};
 
 export const DEMO_ISSUER = "https://login.example.com/";
 export const DEMO_AUDIENCE = "orders-api";
