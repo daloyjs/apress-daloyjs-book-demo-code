@@ -13,7 +13,7 @@ export function buildApp(): App {
       info: { title: "orders-api", version: "0.3.0" },
       ...(process.env.PUBLIC_URL ? { servers: [{ url: process.env.PUBLIC_URL }] } : {}),
     },
-    docs: true,
+    docs: "auto",
   });
 
   app.use(requestId());

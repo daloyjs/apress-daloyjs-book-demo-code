@@ -63,7 +63,7 @@ export function buildApp(
     },
     production: process.env.NODE_ENV === "production",
     openapi: { info: { title: "orders-api", version: "0.22.0" } },
-    docs: process.env.NODE_ENV !== "production",
+    docs: "auto",
     ...appOpts,
   });
 

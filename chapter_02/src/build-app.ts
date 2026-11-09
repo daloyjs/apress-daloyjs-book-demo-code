@@ -34,16 +34,18 @@ export function buildApp(): App {
       ? { behindProxy: { hops: Number(process.env.TRUST_PROXY_HOPS) } }
       : {}),
     // daloy-minimal:strip-start docs
-    // Auto-mounted docs (when `docs: true`):
+    // Auto-mounted docs, outside production only (`docs: "auto"`):
     //   GET /openapi.json — OpenAPI 3.1 spec (JSON)
     //   GET /openapi.yaml — OpenAPI 3.1 spec (YAML, served inline as text/yaml)
     //   GET /docs         — Scalar API reference UI that loads the spec
-    // `docs: true` always mounts. Use `docs: "auto"` to mount only when
-    // `NODE_ENV !== "production"`, or `docs: false` to disable entirely.
+    // `docs: "auto"` skips them when the App is in production, so a deployed
+    // API does not publish its schema. Use `docs: true` to mount them in
+    // production as well, or `docs: false` to disable entirely.
     // Customize paths via `docs: { openapiPath, openapiYamlPath, path, ui }`,
     // or pass `openapiYamlPath: false` to disable just the YAML route.
-    // `info.title` / `info.version` are pulled from package.json by default;
-    // set `openapi.info` here to override them.
+    // `info.title` / `info.version` default to the top-level `title` /
+    // `version` App options, then to "DaloyJS API" / "0.0.0". They are not
+    // read from package.json; set `openapi.info` here to control them.
     openapi: {
       // Leave `servers` unset so the Scalar "Try it" panel and the generated
       // client target the origin the docs are served from — the deployed
@@ -55,7 +57,7 @@ export function buildApp(): App {
         ? { servers: [{ url: process.env.PUBLIC_URL }] }
         : {}),
     },
-    docs: true,
+    docs: "auto",
     // daloy-minimal:strip-end docs
   });
 

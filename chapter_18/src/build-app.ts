@@ -95,7 +95,7 @@ export function buildApp(
     requestTimeoutMs: 15_000,
     production: process.env.NODE_ENV === "production",
     openapi: { info: { title: "orders-api", version: "0.12.0" } },
-    docs: process.env.NODE_ENV !== "production",
+    docs: "auto",
     ...appOpts,
   });
 
