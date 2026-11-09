@@ -3,9 +3,16 @@
  * Maintainer tool: full rebuild of chapter_01..23 from create-daloy node-basic.
  * Rare. Day-to-day re-sync is apply-stage-seeds.mjs. Cross-platform (Node 24+).
  *
- * From monorepo root:
- *   node otherdocs/apress/apress-daloyjs-book-demo-code/scripts/generate-progressive.mjs
- *   node otherdocs/apress/apress-daloyjs-book-demo-code/scripts/apply-stage-seeds.mjs
+ * Point it at a checkout of the DaloyJS framework repo (github.com/daloyjs/daloy),
+ * whose `packages/create-daloy/templates/node-basic` is the scaffold to copy:
+ *   node scripts/generate-progressive.mjs --daloy ../daloy
+ *   DALOY_REPO=../daloy node scripts/generate-progressive.mjs
+ * then re-apply the seeds:
+ *   node scripts/apply-stage-seeds.mjs
+ *
+ * The path is required on purpose. Guessing it from this script's location
+ * picked up stale framework copies, which silently rebuilt the chapters from
+ * an old scaffold.
  */
 import {
   cpSync,
@@ -17,12 +24,32 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT = join(__dirname, "..");
-const REPO = join(__dirname, "..", "..", "..", "..");
+/**
+ * Resolve the DaloyJS framework checkout from `--daloy <path>` or the
+ * `DALOY_REPO` environment variable. Exits with a usage message when neither
+ * is given, so a rebuild never falls back to a guessed (possibly stale) copy.
+ * @returns {string} Absolute path to the framework repo root.
+ */
+function resolveDaloyRepo() {
+  const flag = process.argv.indexOf("--daloy");
+  const fromFlag = flag !== -1 ? process.argv[flag + 1] : undefined;
+  const repo = fromFlag ?? process.env.DALOY_REPO;
+  if (!repo) {
+    console.error(
+      "Missing DaloyJS repo path. Pass --daloy <path> or set DALOY_REPO,\n" +
+        "e.g. node scripts/generate-progressive.mjs --daloy ../daloy",
+    );
+    process.exit(1);
+  }
+  return resolve(repo);
+}
+
+const REPO = resolveDaloyRepo();
 const TEMPLATE = join(REPO, "packages", "create-daloy", "templates", "node-basic");
 const SEEDS = join(__dirname, "seeds");
 
@@ -82,7 +109,7 @@ function writeChapterReadme(n, title, adds, prev) {
 | | |
 | --- | --- |
 | Continues from | \`${prevLabel}\` |
-| Book chapter | manuscript under \`otherdocs/apress/\` |
+| Book chapter | the Apress manuscript (not included in this repo) |
 | Project | \`orders-api\` from create-daloy \`node-basic\` |
 | What this chapter adds | ${adds} |
 
@@ -115,9 +142,14 @@ function write(path, content) {
 
 if (!existsSync(TEMPLATE)) {
   console.error(`Template not found: ${TEMPLATE}`);
-  console.error("Run this script from the DaloyJS monorepo (packages/create-daloy present).");
+  console.error("--daloy / DALOY_REPO must point at the DaloyJS framework repo root.");
   process.exit(1);
 }
+
+const createDaloyPkg = JSON.parse(
+  readFileSync(join(REPO, "packages", "create-daloy", "package.json"), "utf8"),
+);
+console.log(`Using create-daloy ${createDaloyPkg.version} from ${REPO}`);
 
 console.log("Generating progressive demo code from create-daloy...");
 

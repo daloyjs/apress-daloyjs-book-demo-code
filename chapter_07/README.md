@@ -5,7 +5,7 @@
 | | |
 | --- | --- |
 | Continues from | `chapter_06` |
-| Book chapter | manuscript under `otherdocs/apress/` |
+| Book chapter | the Apress manuscript (not included in this repo) |
 | Project | `orders-api` from create-daloy `node-basic` |
 | What this chapter adds | boot-guards.test.ts for cors credentials+wildcard. |
 

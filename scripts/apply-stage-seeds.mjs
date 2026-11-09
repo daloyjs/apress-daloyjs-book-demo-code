@@ -3,8 +3,8 @@
  * Maintainer tool: re-apply stage seeds onto existing chapter_01..23 folders.
  * Readers do not need this. Cross-platform (Node 24+): Linux, macOS, Windows.
  *
- * From monorepo root or this package:
- *   node otherdocs/apress/apress-daloyjs-book-demo-code/scripts/apply-stage-seeds.mjs
+ * From this repo's root:
+ *   node scripts/apply-stage-seeds.mjs
  */
 import {
   copyFileSync,

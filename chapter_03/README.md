@@ -5,7 +5,7 @@
 | | |
 | --- | --- |
 | Continues from | `chapter_02` |
-| Book chapter | manuscript under `otherdocs/apress/` |
+| Book chapter | the Apress manuscript (not included in this repo) |
 | Project | `orders-api` from create-daloy `node-basic` |
 | What this chapter adds | Demo /books route removed; healthz-only orders-api. |
 

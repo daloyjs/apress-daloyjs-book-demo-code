@@ -5,7 +5,7 @@
 | | |
 | --- | --- |
 | Continues from | `(none)` |
-| Book chapter | manuscript under `otherdocs/apress/` |
+| Book chapter | the Apress manuscript (not included in this repo) |
 | Project | `orders-api` from create-daloy `node-basic` |
 | What this chapter adds | Baseline create-daloy node-basic (demo /books still present). Ch1 is threat framing; this is the generator output the book starts from. |
 

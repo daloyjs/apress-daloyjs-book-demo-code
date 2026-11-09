@@ -5,7 +5,7 @@
 | | |
 | --- | --- |
 | Continues from | `chapter_01` |
-| Book chapter | manuscript under `otherdocs/apress/` |
+| Book chapter | the Apress manuscript (not included in this repo) |
 | Project | `orders-api` from create-daloy `node-basic` |
 | What this chapter adds | Same as chapter_01 plus docs/SUPPLY_CHAIN.md. |
 

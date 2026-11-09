@@ -19,12 +19,7 @@ All maintainer scripts are **Node** (`.mjs`). They run on Linux, macOS, and Wind
 
 When you change a seed (or want every chapter folder to match the seeds again):
 
-```sh
-# from the DaloyJS monorepo root
-node otherdocs/apress/apress-daloyjs-book-demo-code/scripts/apply-stage-seeds.mjs
-```
-
-Or from this directory:
+From this repo's root:
 
 ```sh
 node scripts/apply-stage-seeds.mjs
@@ -43,15 +38,15 @@ cd ../chapter_23 && pnpm test
 Only if the chapter trees are missing or you intentionally reset from the scaffolder:
 
 ```sh
-node otherdocs/apress/apress-daloyjs-book-demo-code/scripts/generate-progressive.mjs
-node otherdocs/apress/apress-daloyjs-book-demo-code/scripts/apply-stage-seeds.mjs
+node scripts/generate-progressive.mjs --daloy ../daloy
+node scripts/apply-stage-seeds.mjs
 ```
 
-`generate-progressive.mjs` expects the monorepo (`packages/create-daloy/templates/node-basic`). After a full rebuild, reinstall in any chapter you test (`pnpm install`).
+`--daloy` (or the `DALOY_REPO` environment variable) must point at an up-to-date checkout of the DaloyJS framework repo ([daloyjs/daloy](https://github.com/daloyjs/daloy)). The script copies `packages/create-daloy/templates/node-basic` from there and prints the `create-daloy` version it used. It refuses to run without the path, so it can never rebuild the chapters from a stale copy of the framework. After a full rebuild, reinstall in any chapter you test (`pnpm install`).
 
 ## Lockstep rule
 
-When a manuscript chapter teaches a feature, the matching `chapter_NN` folder (and later folders that inherit it) must implement it. Drift is a release-blocking bug. See [`../AGENTS.md`](../AGENTS.md).
+When a manuscript chapter teaches a feature, the matching `chapter_NN` folder (and later folders that inherit it) must implement it. Drift is a release-blocking bug. The manuscript's `AGENTS.md` (in the book repo, one level above this folder when it is checked out as the `books/apress/apress-daloyjs-book-demo-code` submodule) has the full rule.
 
 ## Manual step-by-step (no scripts)
 
