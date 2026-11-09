@@ -66,7 +66,7 @@ function setPkgVersion(dir, ver, name = "orders-api") {
   pkg.name = name;
   pkg.version = ver;
   pkg.dependencies = pkg.dependencies ?? {};
-  pkg.dependencies["@daloyjs/core"] = "^1.17.2";
+  pkg.dependencies["@daloyjs/core"] = "^1.22.0";
   pkg.scripts = pkg.scripts ?? {};
   pkg.scripts.test = "node --experimental-strip-types --test tests/**/*.test.ts";
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`, "utf8");
@@ -94,7 +94,7 @@ pnpm test
 pnpm dev
 \`\`\`
 
-Pin: \`@daloyjs/core\` ^1.17.2, Node 24 LTS or 26+, pnpm 12, TypeScript 7, Zod 4.
+Pin: \`@daloyjs/core\` ^1.22.0, Node 24 LTS or 26+, pnpm 12, TypeScript 7, Zod 4.
 
 This folder is a **full tree** at the end of the chapter (not a patch). Prefer it or tag \`chapter-${id}\`.
 `;

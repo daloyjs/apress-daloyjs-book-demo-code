@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { safeJsonParse } from "@daloyjs/core";
+import { z } from "zod";
+import { App, safeJsonParse } from "@daloyjs/core";
 import { buildApp } from "../src/build-app.ts";
 
 /** CSRF-safe browser headers when Ch8+ csrf(fetch-metadata) is present. */
@@ -37,6 +38,108 @@ test("a body just under the limit is not a 413", async () => {
     body: nearLimitBody,
   });
   assert.notEqual(res.status, 413);
+});
+
+/**
+ * Listing 5-4: a route-level bodyLimitBytes replaces the App value for that
+ * route only. Built on a small standalone App so the 1 KiB App default and
+ * the per-route numbers are easy to read.
+ */
+function buildLimitsApp(): App {
+  const app = new App({ bodyLimitBytes: 1024 });
+  const NoteSchema = z.object({ note: z.string() }).strict();
+  const ok = {
+    200: {
+      description: "ok",
+      body: z.object({ ok: z.boolean() }).strict(),
+    },
+  };
+  const handler = async () => ({ status: 200 as const, body: { ok: true } });
+  app.post(
+    "/import",
+    {
+      operationId: "importNotes",
+      bodyLimitBytes: 8 * 1024, // raised for this route only
+      request: { body: NoteSchema },
+      responses: ok,
+    },
+    handler,
+  );
+  app.post(
+    "/login",
+    {
+      operationId: "login",
+      bodyLimitBytes: 64, // lowered for this route only
+      request: { body: NoteSchema },
+      responses: ok,
+    },
+    handler,
+  );
+  app.post(
+    "/notes",
+    {
+      operationId: "createNote",
+      request: { body: NoteSchema },
+      responses: ok,
+    },
+    handler,
+  );
+  return app;
+}
+
+test("a route that raises bodyLimitBytes accepts what the App default refuses", async () => {
+  const app = buildLimitsApp();
+  const twoKiB = JSON.stringify({ note: "x".repeat(2048) });
+  const raised = await app.request("/import", {
+    method: "POST",
+    headers: browser,
+    body: twoKiB,
+  });
+  assert.equal(raised.status, 200);
+  // Every other route keeps the 1 KiB App default.
+  const inherited = await app.request("/notes", {
+    method: "POST",
+    headers: browser,
+    body: twoKiB,
+  });
+  assert.equal(inherited.status, 413);
+});
+
+test("a route that lowers bodyLimitBytes refuses what the App default accepts", async () => {
+  const app = buildLimitsApp();
+  const small = JSON.stringify({ note: "x".repeat(200) });
+  const lowered = await app.request("/login", {
+    method: "POST",
+    headers: browser,
+    body: small,
+  });
+  assert.equal(lowered.status, 413);
+  const inherited = await app.request("/notes", {
+    method: "POST",
+    headers: browser,
+    body: small,
+  });
+  assert.equal(inherited.status, 200);
+});
+
+test("an invalid route-level bodyLimitBytes throws at registration", () => {
+  const app = new App();
+  assert.throws(() =>
+    app.post(
+      "/bad",
+      {
+        operationId: "bad",
+        bodyLimitBytes: -1,
+        responses: {
+          200: {
+            description: "ok",
+            body: z.object({ ok: z.boolean() }).strict(),
+          },
+        },
+      },
+      async () => ({ status: 200 as const, body: { ok: true } }),
+    ),
+  );
 });
 
 test("a JSON route refuses a body sent as text/plain", async () => {

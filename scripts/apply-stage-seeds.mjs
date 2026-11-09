@@ -385,7 +385,7 @@ pnpm test
 pnpm dev
 \`\`\`
 
-Pin: \`@daloyjs/core\` ^1.17.2. Tag: \`chapter-${id}\`.
+Pin: \`@daloyjs/core\` ^1.22.0. Tag: \`chapter-${id}\`.
 `,
   );
 }
@@ -422,6 +422,13 @@ test("capstone posture keeps secureDefaults and finite body limit", () => {
   const posture = app.getSecurityPosture();
   assert.equal(posture.secureDefaults, true);
   assert.ok(posture.bodyLimitBytes > 0 && posture.bodyLimitBytes <= 1024 * 1024);
+});
+
+test("capstone posture: no route widens its own body limit or deadline", () => {
+  // Listing 22-3: an empty routeOverrides list fails the build the day a
+  // route quietly raises bodyLimitBytes or requestTimeoutMs for itself.
+  const posture = buildApp({ env: "production" }).getSecurityPosture();
+  assert.deepEqual(posture.routeOverrides, []);
 });
 
 test("capstone still serves healthz under layered middleware and loadShedding", async () => {

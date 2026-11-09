@@ -17,7 +17,7 @@ pnpm test
 pnpm dev
 ```
 
-Pin: `@daloyjs/core` ^1.17.2, Node 24 LTS or 26+, pnpm 12, TypeScript 7, Zod 4.
+Pin: `@daloyjs/core` ^1.22.0, Node 24 LTS or 26+, pnpm 12, TypeScript 7, Zod 4.
 
 This folder is a **full tree** at the end of the chapter (not a patch). Prefer it or tag `chapter-17`.
 

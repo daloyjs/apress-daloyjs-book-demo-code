@@ -22,7 +22,7 @@
     "verify:known-deps": "node scripts/verify-known-deps.ts"
   },
   "dependencies": {
-    "@daloyjs/core": "^1.17.2",
+    "@daloyjs/core": "^1.22.0",
     "zod": "^4.6.6"
   },
   "devDependencies": {
