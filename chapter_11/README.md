@@ -10,4 +10,4 @@ pnpm test
 pnpm dev
 ```
 
-Pin: `@daloyjs/core` ^1.22.0. Tag: `chapter-11`.
+Pin: `@daloyjs/core` ^1.23.0. Tag: `chapter-11`.

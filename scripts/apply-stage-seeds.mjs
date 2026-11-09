@@ -385,7 +385,7 @@ pnpm test
 pnpm dev
 \`\`\`
 
-Pin: \`@daloyjs/core\` ^1.22.0. Tag: \`chapter-${id}\`.
+Pin: \`@daloyjs/core\` ^1.23.0. Tag: \`chapter-${id}\`.
 `,
   );
 }
